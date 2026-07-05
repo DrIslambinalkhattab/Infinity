@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>معاينة الفاتورة</title>
+
+  <!-- Font + Icons (اختياري لو موجودين عندك بالفعل) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --font-main:'Cairo',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      --gold:#C9A84C;
+      --gold-dark:#a97b0f;
+      --gold-light:#d7b96a;
+      --text:#eaf0fb;
+      --text2:#b5c1d1;
+      --text3:#7f8aa0;
+      --dark2:#071325;
+      --dark4:#0d1b2d;
+      --border2:rgba(255,255,255,.07);
+      --radius-sm:14px;
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--font-main);
+      background:radial-gradient(1200px 500px at 70% -10%, rgba(201,168,76,.12), transparent 60%),
+                 radial-gradient(900px 450px at 0% 20%, rgba(78,121,210,.10), transparent 60%),
+                 #050c16;
+      color:var(--text);
+    }
+
+    .shell{max-width:1100px;margin:0 auto;padding:28px 16px 46px}
+    .actions{display:flex;justify-content:center;gap:10px;margin:0 auto 18px}
+    .actions .btn{min-width:180px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:16px 18px;border-radius:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+      border:1px solid rgba(255,255,255,.07);
+      box-shadow:0 18px 44px rgba(0,0,0,.22);
+      margin-bottom:18px;
+    }
+    .topbar h1{margin:0;font-size:16px;font-weight:900;letter-spacing:.2px}
+    .topbar .hint{font-size:12px;color:var(--text2);font-weight:700;line-height:1.7}
+
+    /* Buttons (خفيفة ومناسبة للمعاينة فقط) */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      height:42px;padding:0 16px;border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      font-family:var(--font-main);
+      font-weight:900;font-size:12.5px;
+      cursor:pointer;transition:transform .15s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.16);box-shadow:0 16px 34px rgba(0,0,0,.20)}
+    .btn:active{transform:translateY(0)}
+    .btn-gold{background:linear-gradient(135deg,var(--gold-light),var(--gold));border:none;color:#081425}
+    .btn-outline{background:transparent}
+    .btn-sm{height:38px;border-radius:14px;padding:0 14px;font-size:12px}
+
+    /* ─── PREVIEW (من ملفك) ─── */
+    .preview-paper{
+      --preview-color:#C9A84C;--preview-text:#24314d;--preview-bg:#ffffff;
+      width:100%;max-width:724px;margin:0 auto;
+      background:#ffffff;
+      border-radius:24px;padding:34px 28px 22px;min-height:400px;color:var(--preview-text);
+      font-family:var(--font-main);font-size:11px;position:relative;overflow:hidden;
+      box-shadow:0 10px 26px rgba(15,23,42,.08),0 1px 4px rgba(15,23,42,.03);
+      border:1px solid rgba(15,30,63,.05)
+    }
+    .preview-paper::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 24%);pointer-events:none}
+    .preview-watermark{position:absolute;top:50%;right:-4%;transform:translateY(-50%) rotate(-34deg);font-size:76px;font-weight:900;letter-spacing:6px;color:rgba(15,30,63,.06);white-space:nowrap;pointer-events:none;user-select:none;z-index:0;text-transform:uppercase;
+      background-repeat:no-repeat;background-position:center;background-size:contain;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    }
+    .preview-watermark.wm-image{color:transparent;text-shadow:none;letter-spacing:0;filter:none;
+      width:520px;height:240px;
+    }
+    .preview-watermark.wm-image::selection{background:transparent}
+    .preview-watermark.wm-image{background-color:transparent}
+    .preview-watermark.wm-image{mix-blend-mode:multiply}
+    .preview-watermark.wm-text{width:auto;height:auto}
+    .preview-header{position:relative;z-index:1;display:grid;grid-template-columns:110px 1fr;align-items:start;gap:16px;padding-top:2px;padding-bottom:22px;margin-bottom:18px;border-bottom:1.5px solid rgba(201,168,76,.78);direction:ltr}
+    .preview-header-company,.preview-header-logo,.preview-header-status{direction:rtl}
+    .preview-header-company{text-align:right;padding-top:2px}
+    .preview-header-logo{display:flex;justify-content:center}
+    .preview-header-status{display:flex;justify-content:flex-start;padding-top:0}
+    .preview-logo-frame{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:3px solid rgba(201,168,76,.92);box-shadow:0 6px 16px rgba(201,168,76,.10)}
+    .preview-logo{width:68px;height:68px;object-fit:contain;filter:none}
+    .preview-company{font-size:27px;font-weight:900;color:#0f1d3c;font-family:'Cairo',sans-serif;line-height:1.1}
+    .preview-slogan{font-size:13px;color:#7a8090;margin-top:6px;font-weight:600}
+    .preview-status-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:1.5px solid rgba(201,168,76,.92);border-radius:12px;background:#fff;transform:rotate(-7deg);font-size:15px;font-weight:900;color:#c59612}
+    .preview-status-badge::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:rgba(201,168,76,.14);font-size:10px}
+    .preview-status-badge.pending{color:#bb7a13;border-color:rgba(210,146,20,.86)}
+    .preview-status-badge.pending::before{content:'⏳'}
+    .preview-status-badge.draft{color:#6d7384;border-color:rgba(132,138,158,.8)}
+    .preview-status-badge.draft::before{content:'✎'}
+    .preview-info-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .preview-info-box{background:#ffffff;border:1px solid rgba(15,30,63,.07);border-radius:16px;padding:15px 15px 13px;box-shadow:0 4px 12px rgba(15,23,42,.03);min-height:124px}
+    .preview-info-head{display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:10px;direction:rtl}
+    .preview-info-label{font-size:13px;color:#162240;font-weight:800;letter-spacing:0;order:1}
+    .preview-info-icon{font-size:17px;color:var(--preview-color);order:0}
+    .preview-info-line{font-size:12px;color:#6f7687;margin-bottom:6px;line-height:1.65;display:flex;align-items:flex-start;gap:7px}
+    .preview-info-line strong{font-size:14px;color:#18233f;font-weight:800}
+    .preview-table-wrap{position:relative;z-index:1;border:1px solid rgba(16,33,68,.07);border-radius:18px;overflow:hidden;box-shadow:0 8px 22px rgba(15,23,42,.05);background:#fff}
+    .preview-table{width:100%;border-collapse:separate;border-spacing:0;margin-bottom:0}
+    .preview-table thead tr{background:linear-gradient(90deg,#07162e 0%,#0a1d3b 52%,#10254a 100%)}
+    .preview-table th{background:transparent;color:#fff;padding:14px 16px;font-size:13px;text-align:right;font-weight:800;border-bottom:none;white-space:nowrap}
+    .preview-table th+th{border-right:none}
+    .preview-table td{padding:13px 13px;border-bottom:1px solid #edf0f5;font-size:12.5px;color:#24314d;vertical-align:top}
+    .preview-table tr:last-child td{border-bottom:none}
+    .preview-service-title{font-weight:800;color:#122041;margin-bottom:2px}
+    .preview-service-sub{font-size:10.5px;color:#8a91a1}
+    .preview-summary{position:relative;z-index:1;display:flex;justify-content:flex-end;align-items:flex-end;gap:14px;margin-top:12px}
+    .preview-notes{font-size:11px;color:#7f8697;max-width:220px;line-height:1.75;min-height:24px}
+    .preview-totals{width:314px;max-width:100%;border:1px solid rgba(16,33,68,.08);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 6px 14px rgba(15,23,42,.03)}
+    .preview-total-row{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;font-size:13px;color:#1f2b46;border-bottom:1px solid #eceff5;font-weight:800}
+    .preview-total-row:last-child{border-bottom:none}
+    .preview-total-row.discount span:last-child{color:#e35252}
+    .preview-total-final{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;font-size:16px;font-weight:900;color:#fff;background:linear-gradient(90deg,#a97b0f,#c89422);border-top:none}
+    .preview-footer{position:relative;z-index:1;text-align:center;font-size:11.5px;color:#61697b;margin-top:20px;padding-top:14px;border-top:1px solid rgba(201,168,76,.74);line-height:1.85;font-weight:600}
+    .preview-stamp{position:absolute;bottom:72px;left:18px;width:80px;height:80px;border-radius:50%;border:1px dashed rgba(201,168,76,.12);display:flex;align-items:center;justify-content:center;transform:rotate(-14deg);box-shadow:none;background:rgba(255,255,255,.08)}
+    .preview-stamp-inner{width:58px;height:58px;border-radius:50%;border:1px solid rgba(201,168,76,.12);display:flex;align-items:center;justify-content:center;text-align:center;padding:8px}
+    .preview-stamp-text{font-size:7px;font-weight:900;color:var(--preview-stamp-color, rgba(201,168,76,.42));text-transform:uppercase;line-height:1.4;letter-spacing:.8px}
+
+    /* Responsive */
+    @media (max-width:860px){
+      .preview-paper{padding:24px 20px 20px;border-radius:24px}
+      .preview-header{grid-template-columns:1fr;direction:rtl;gap:12px}
+      .preview-header-status,.preview-header-logo,.preview-header-company{justify-content:center;text-align:center;padding-top:0}
+      .preview-info-grid{grid-template-columns:1fr}
+      .preview-summary{flex-direction:column;align-items:stretch}
+      .preview-totals{width:100%}
+      .preview-watermark{font-size:64px}
+    }
+
+    /* ─── PRINT (من ملفك) ─── */
+    @page{size:A4 portrait;margin:14mm}
+    @media print{
+      html,body{background:#fff!important;overflow:visible!important;width:auto!important;height:auto!important}
+      body.print-invoice-only *{visibility:hidden!important}
+      body.print-invoice-only #invoice-preview,
+      body.print-invoice-only #invoice-preview .preview-paper,
+      body.print-invoice-only #invoice-preview .preview-paper *{visibility:visible!important}
+
+      body.print-invoice-only #invoice-preview{display:block!important;margin:0!important;padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important;max-width:none!important}
+      body.print-invoice-only .no-print{display:none!important}
+
+      body.print-invoice-only #invoice-preview .preview-paper{
+        width:100%!important;max-width:none!important;min-height:auto!important;margin:0 auto!important;padding:11mm 10mm 9mm!important;
+        background:#fff!important;box-shadow:none!important;border:1px solid rgba(15,30,63,.06)!important;border-radius:28px!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;
+        -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important
+      }
+      body.print-invoice-only #invoice-preview .preview-paper{direction:rtl!important}
+      body.print-invoice-only #invoice-preview .preview-header{grid-template-columns:1fr 32mm 1fr!important;direction:ltr!important;gap:10px!important}
+      body.print-invoice-only #invoice-preview .preview-header-company{justify-self:end!important;text-align:right!important;padding-right:0!important;margin-right:0!important}
+      body.print-invoice-only #invoice-preview .preview-status-badge{margin-left:-6mm!important}
+      body.print-invoice-only #invoice-preview .preview-stamp{left:0!important;right:auto!important}
+      body.print-invoice-only #invoice-preview .preview-info-head{direction:rtl!important;justify-content:flex-start!important;gap:10px!important}
+      body.print-invoice-only #invoice-preview .preview-info-head .preview-info-icon{order:0!important}
+      body.print-invoice-only #invoice-preview .preview-info-head .preview-info-label{order:1!important}
+      body.print-invoice-only #invoice-preview .preview-info-line{direction:rtl!important}
+      body.print-invoice-only #invoice-preview .preview-info-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+      body.print-invoice-only #invoice-preview .preview-summary{display:flex!important;flex-direction:row!important;align-items:flex-end!important}
+      body.print-invoice-only #invoice-preview .preview-totals{width:88mm!important}
+      body.print-invoice-only #invoice-preview .preview-watermark.wm-text{font-size:72px}
+    }
+
+    /* ─── MODAL + PRINT PREVIEW (من ملفك مع لمسات بسيطة) ─── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(4px)}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal{background:linear-gradient(180deg,rgba(10,22,39,.94),rgba(11,23,40,.88));border:1px solid rgba(255,255,255,.07);border-radius:24px;padding:28px;width:90%;max-width:520px;transform:scale(.95) translateY(10px);transition:all .3s;box-shadow:0 24px 80px rgba(0,0,0,.45);backdrop-filter:blur(18px)}
+    .modal-overlay.open .modal{transform:scale(1) translateY(0)}
+    .modal-title{font-size:17px;font-weight:900;color:var(--gold);margin-bottom:20px;display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border2)}
+
+    .print-preview-modal{max-width:980px;width:min(96vw,980px);padding:22px}
+    .print-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .print-preview-meta{font-size:12px;color:var(--text2);line-height:1.7}
+    .print-preview-stage{background:#0a1320;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:18px;overflow:auto;max-height:72vh}
+    .print-preview-sheet{width:210mm;min-height:297mm;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.28);padding:10mm 9mm 8mm;transform-origin:top center;transform:scale(.58)}
+    .print-preview-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+    @media (max-width:1100px){.print-preview-sheet{transform:scale(.48)}}
+    @media (max-width:860px){.print-preview-sheet{transform:scale(.36)}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="actions no-print">
+      <button class="btn btn-gold" onclick="copyInvoiceImage()"><i class="fas fa-copy"></i> نسخ الفاتورة</button>
+    </div>
+
+    <!-- PREVIEW (نفس HTML من ملفك) -->
+    <section id="invoice-preview">
+      <div class="preview-paper" id="preview-paper">
+        <div class="preview-watermark wm-text" id="prev-watermark">Infinity Laser</div>
+        <div class="preview-header">
+          <div class="preview-header-logo">
+            <div class="preview-logo-frame" id="prev-logo-frame">
+              <img class="preview-logo" src="https://raw.githubusercontent.com/DrIslambinalkhattab/Infinity/main/Infinity.png" crossorigin="anonymous" onerror="this.style.display='none'" alt="logo" id="prev-logo">
+            </div>
+          </div>
+          <div class="preview-header-company">
+            <div class="preview-company" id="prev-company">Infinity Laser</div>
+            <div class="preview-slogan" id="prev-slogan">دقة لا متناهية لنتائج مثالية</div>
+          </div>
+        </div>
+
+
+        <div class="preview-table-wrap">
+          <table class="preview-table">
+            <thead><tr><th>#</th><th>الخدمة / الوصف</th><th>الكمية</th><th>السعر</th><th>المجموع</th></tr></thead>
+            <tbody id="prev-items-body">
+              <tr class="preview-empty-row">
+                <td colspan="5" style="text-align:center;color:#8a91a1;font-weight:800;padding:24px 16px">لا توجد عناصر مضافة</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="preview-summary">
+
+          <div class="preview-totals">
+            <div class="preview-total-row"><span>الإجمالي</span><span id="prev-subtotal">0 ج.م</span></div>
+            <div class="preview-total-row discount" id="prev-discount-row" style="display:none"><span>الخصم</span><span id="prev-discount-val">0 ج.م</span></div>
+            <div class="preview-total-row" id="prev-paid-row"><span>المدفوع</span><span id="prev-paid">0 ج.م</span></div>
+            <div class="preview-total-row" id="prev-remaining-row"><span>المتبقي</span><span id="prev-remaining">0 ج.م</span></div>
+            <div class="preview-total-final"><span>الإجمالي النهائي</span><span id="prev-total">0 ج.م</span></div>
+          </div>
+        </div>
+
+        <div id="prev-stamp-wrap" style="display:block">
+          <div class="preview-stamp">
+            <div class="preview-stamp-inner">
+              <div class="preview-stamp-text" id="prev-stamp-text">INFINITY<br>LASER</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-footer">
+          <div id="prev-footer-note-1">الفاتورة صالحة لمدة 7 أيام. الدفع نقداً أو بتحويل بنكي.</div>
+          <div id="prev-footer-note-2">دقة لا متناهية لنتائج مثالية. رائدون في تكنولوجيا الليزر الحديثة.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+
+  <script>
+    // تاريخ اليوم للعرض (لو عنصر التاريخ موجود)
+    (function(){
+      const d = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      const s = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const el = document.getElementById('prev-date');
+      if(el) el.textContent = s;
+    })();
+
+    // نسخ صورة المعاينة إلى الحافظة
+    async function copyInvoiceImage(){
+      const target = document.getElementById('preview-paper');
+      if(!target) return;
+
+      try{
+        const canvas = await html2canvas(target, {
+          backgroundColor: null,
+          scale: 2,
+          useCORS: true,
+          allowTaint: false
+        });
+
+        const radius = parseFloat(getComputedStyle(target).borderRadius || '24') * 2;
+        const roundedCanvas = document.createElement('canvas');
+        roundedCanvas.width = canvas.width;
+        roundedCanvas.height = canvas.height;
+
+        const ctx = roundedCanvas.getContext('2d');
+        ctx.clearRect(0, 0, roundedCanvas.width, roundedCanvas.height);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, roundedCanvas.width, roundedCanvas.height);
+        ctx.beginPath();
+        if(ctx.roundRect){
+          ctx.roundRect(0, 0, roundedCanvas.width, roundedCanvas.height, radius);
+        }else{
+          const w = roundedCanvas.width, h = roundedCanvas.height, r = radius;
+          ctx.moveTo(r, 0);
+          ctx.lineTo(w - r, 0);
+          ctx.quadraticCurveTo(w, 0, w, r);
+          ctx.lineTo(w, h - r);
+          ctx.quadraticCurveTo(w, h, w - r, h);
+          ctx.lineTo(r, h);
+          ctx.quadraticCurveTo(0, h, 0, h - r);
+          ctx.lineTo(0, r);
+          ctx.quadraticCurveTo(0, 0, r, 0);
+        }
+        ctx.clip();
+        ctx.drawImage(canvas, 0, 0);
+
+        const blob = await new Promise((resolve) => roundedCanvas.toBlob(resolve, 'image/png', 1));
+        if(!blob) throw new Error('blob_failed');
+
+        if(navigator.clipboard && window.ClipboardItem){
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          alert('تم نسخ الفاتورة كصورة.');
+          return;
+        }
+
+        // fallback: تنزيل الصورة لو النسخ غير مدعوم
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'invoice.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        alert('النسخ غير مدعوم هنا — تم تنزيل الصورة بدلًا من ذلك.');
+      }catch(err){
+        console.error(err);
+        alert('تعذر نسخ الفاتورة. جرّب فتح الصفحة عبر HTTPS أو متصفح أحدث.');
+      }
+    }
+  </script>
+</body>
+</html>
